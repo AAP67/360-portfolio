@@ -7,8 +7,16 @@ export default function AdvisorDashboard() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
 
-  const loadClients = () => {
-    supabase.from('clients').select('*').then(({ data }) => setClients(data || []))
+  const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000'
+
+  const loadClients = async () => {
+    const { data: clientList } = await supabase.from('clients').select('*')
+    const { data: accountList } = await supabase.from('accounts').select('*')
+    const merged = (clientList || []).map(c => ({
+      ...c,
+      accounts: (accountList || []).filter(a => a.client_id === c.id)
+    }))
+    setClients(merged)
   }
 
   useEffect(() => { loadClients() }, [])
@@ -35,8 +43,17 @@ export default function AdvisorDashboard() {
       <div style={{ fontSize:16, fontWeight:700, color:'#1a1a2e', marginBottom:16 }}>All Clients</div>
       {clients.map(c => (
         <div key={c.id} style={{ background:'#f8f8fa', borderRadius:10, padding:'14px 16px', marginBottom:8 }}>
-          <div style={{ fontSize:14, fontWeight:600, color:'#1f2937' }}>{c.name}</div>
-          <div style={{ fontSize:11, color:'#aaa' }}>{c.email}</div>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:14, fontWeight:600, color:'#1f2937' }}>{c.name}</div>
+              <div style={{ fontSize:11, color:'#aaa' }}>{c.email}</div>
+            </div>
+            {c.accounts.length > 0 ? (
+              <div style={{ fontSize:10, color:'#059669', fontWeight:600, background:'#ecfdf5', padding:'4px 10px', borderRadius:6 }}>LINKED</div>
+            ) : (
+              <a href={BACKEND + '/auth/zerodha/login?client_id=' + c.id} style={{ background:'#1a1a2e', color:'#fff', borderRadius:6, padding:'6px 12px', fontSize:10, fontWeight:600, textDecoration:'none' }}>Link Zerodha</a>
+            )}
+          </div>
         </div>
       ))}
       {showForm ? (
